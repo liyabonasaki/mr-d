@@ -9,9 +9,10 @@ accepts orders, manages stock, and exposes clean REST interfaces.
 
 1. [Running with Docker Compose (recommended)](#running-with-docker-compose-recommended)
 2. [Running locally (Python + PostgreSQL)](#running-locally-python--postgresql)
-3. [Demonstrating the two unhappy paths](#demonstrating-the-two-unhappy-paths)
-4. [API reference](#api-reference)
-5. [Project layout](#project-layout)
+3. [Running the tests](#running-the-tests)
+4. [Demonstrating the two unhappy paths](#demonstrating-the-two-unhappy-paths)
+5. [API reference](#api-reference)
+6. [Project layout](#project-layout)
 
 ---
 
@@ -47,9 +48,6 @@ Open a second terminal:
 
 ```bash
 # Seed products and submit orders (includes duplicates)
-docker compose exec api python scripts/seed.py --base-url http://localhost:8000
-
-# Or run from outside the container (Python must be installed locally)
 python scripts/seed.py
 
 # Outage simulation and catch-up demo
@@ -143,6 +141,74 @@ API available at **http://localhost:8000**.
 Swagger UI: **http://localhost:8000/docs**
 
 The stock worker starts automatically as a background thread in the same process.
+
+---
+
+## Running the tests
+
+The test suite is fully self-contained — **no running server or database required**. All external dependencies are mocked.
+
+### Install dependencies (if not already done)
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run all tests
+
+```bash
+python -m pytest tests/ -v
+```
+
+### Run a specific test file
+
+```bash
+python -m pytest tests/test_orders.py -v
+python -m pytest tests/test_products.py -v
+python -m pytest tests/test_worker.py -v
+python -m pytest tests/test_api.py -v
+```
+
+### Run a specific test class or test
+
+```bash
+# All tests in a class
+python -m pytest tests/test_orders.py::TestCreateOrderHappyPath -v
+
+# A single test
+python -m pytest tests/test_worker.py::TestPollOnceEmpty::test_commits_even_when_no_rows -v
+```
+
+### Run with summary only (no verbose output)
+
+```bash
+python -m pytest tests/ -q
+```
+
+### Expected output
+
+```
+platform win32 -- Python 3.14.7, pytest-8.3.5
+collected 73 items
+
+tests/test_api.py .............................   [ 39%]
+tests/test_orders.py ............                [ 56%]
+tests/test_products.py ............              [ 72%]
+tests/test_worker.py ....................        [100%]
+
+73 passed in 0.53s
+```
+
+### What is tested
+
+| File | Coverage |
+|------|----------|
+| `test_products.py` | `get_prices`, `get_product`, `upsert_product`, `deduct_stock` — happy path, insufficient stock, partial shortfall, unknown SKU |
+| `test_orders.py` | `create_order` happy path, unknown SKU validation, order total calculation, `get_order` found/not-found |
+| `test_worker.py` | `pause_worker`, `resume_worker`, `stop_worker` state transitions; `_poll_once` empty and batch cases; `_process_one` happy path, insufficient stock, unexpected errors; `_record_failure` |
+| `test_api.py` | All endpoints via `TestClient` — status codes, response shapes, 404s, 422 validation errors, worker control |
+
+The duplicate order path (`is_duplicate: true`) is covered end-to-end in `test_api.py::TestPostOrders`.
 
 ---
 
@@ -264,11 +330,20 @@ mr-d/
 ├── scripts/
 │   ├── seed.py           # Demo: products + order burst with duplicates
 │   └── demo_outage.py    # Demo: pause worker → orders → resume → verify
+├── tests/
+│   ├── conftest.py       # Shared fixtures and mock helpers
+│   ├── test_api.py       # API endpoint tests via TestClient
+│   ├── test_orders.py    # Orders domain unit tests
+│   ├── test_products.py  # Products & stock unit tests
+│   └── test_worker.py    # Worker state machine and processing tests
 ├── main.py               # Uvicorn entry point
 ├── Dockerfile
 ├── docker-compose.yml
+├── pytest.ini
 ├── requirements.txt
 ├── .env.example
 ├── README.md
 └── SOLUTION.md
 ```
+
+---

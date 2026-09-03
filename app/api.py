@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import threading
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query
@@ -274,7 +274,7 @@ def daily_report(
     """
     report_date: date
     if date is None:
-        report_date = datetime.utcnow().date()
+        report_date = datetime.now(timezone.utc).date()
     else:
         try:
             report_date = datetime.strptime(date, "%Y-%m-%d").date()

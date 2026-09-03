@@ -6,3 +6,7 @@ pydantic==2.13.5
 pydantic-settings==2.15.0
 python-dotenv==1.2.3
 httpx==0.28.1
+
+# Testing
+pytest==8.3.5
+pytest-mock==3.14.0

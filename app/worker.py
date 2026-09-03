@@ -78,12 +78,17 @@ def is_paused() -> bool:
 MAX_ATTEMPTS = 3
 
 
-def _process_one(event_id: int, payload: dict) -> None:
+def _process_one(event_id: int, payload: dict | str) -> None:
     """Apply stock deduction for a single outbox event.
 
     Runs inside its own transaction that is passed through to deduct_stock
     so the stock update and the outbox status change commit together.
     """
+    # payload may be a dict (psycopg auto-deserialises jsonb) or a raw
+    # JSON string when called with a string argument in tests / edge cases.
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+
     items = payload.get("items", [])
 
     with get_conn() as conn:
