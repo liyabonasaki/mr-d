@@ -194,3 +194,39 @@ service.
   worker poll cycle and stock deduction latency.
 - Use a connection pooler (PgBouncer) in front of PostgreSQL for
   production connection counts.
+
+---
+
+## AI tool usage
+
+I used an AI coding assistant during this assignment. Below are the key prompts and how I used the output.
+
+---
+
+**Boilerplate and project setup**
+
+Prompt: *"Set up a FastAPI project with psycopg v3, pydantic-settings, and a connection pool. No ORM."*
+
+Used the output as a starting point for `db.py` and `config.py`, then adjusted the pool settings and context manager behaviour to match how I wanted commits and rollbacks handled.
+
+---
+
+**Unit test scaffolding**
+
+Prompt: *"Write pytest unit tests for this function using mocks — no real database. Mock get_conn() as a context manager."*
+
+The trickiest part was getting the mock cursor to behave correctly as a context manager. The AI generated the initial fixture structure in `conftest.py`. I reviewed it, identified that the `side_effect` approach for simulating `UniqueViolation` needed adjustment for the read-back calls after rollback, and fixed that manually.
+
+---
+
+**Docker and Compose**
+
+Prompt: *"Write a multi-stage Dockerfile for a Python FastAPI app and a docker-compose with a health-checked postgres dependency."*
+
+Used the output directly with minor changes — added the non-root user and adjusted the `DATABASE_URL` to use the compose service name `db` instead of `localhost`.
+
+---
+
+**What I did not use AI for**
+
+The core design decisions — the transactional outbox pattern, idempotency via `UniqueViolation`, `SELECT FOR UPDATE` for stock safety, and `SKIP LOCKED` for the worker queue — were my own. I used the AI to speed up boilerplate, not to design the system.
